@@ -15,7 +15,7 @@ This document outlines the database schema for the standup application, focusing
   password: string, // Hashed password for security 
   name: string,                  
   profileImage: string?,                 
-  timezone: string, // e.g., "America/New_York"
+  timezone: string, // e.g., "Auckland/Auckland"
   status: string, // e.g., "active", "inactive"       
   createdAt: Date,
   updatedAt: Date
