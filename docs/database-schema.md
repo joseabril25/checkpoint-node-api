@@ -107,6 +107,40 @@ Production-ready dual-token authentication system using JWTs.
 - User sessions should be monitored for unusual activity (e.g., multiple logins from different locations).
 - Implement rate limiting on login attempts to prevent brute force attacks.
 - Consider using HTTPS to encrypt data in transit.
+- Input validation
 
 This approach balances security and usability, allowing users to stay logged in while maintaining the ability to revoke access when necessary.
 
+# Design Consierations
+
+## Why mongoDB?
+
+### Pros:
+
+- Renti uses MongoDB
+- Flexible schema design allows for easy changes as requirements evolve
+- Document-based structure aligns well with the application's data model
+- Scalability for future growth with built-in support for horizontal scaling
+- Built-in date handling and TTL indexes for automatic cleanup of expired data
+
+### Cons:
+
+- Less strict schema enforcement compared to SQL databases
+- No built-in support for relational joins, but this is mitigated by the application's design
+
+### Date Handling
+
+- MongoDB's Date type is used for all date fields, allowing for easy querying and sorting.
+- All dates are stored in UTC to avoid timezone issues.
+- Prevents issues with daylight saving time changes by storing dates in a consistent format.
+- Date fields are indexed for efficient querying, especially for standup entries by date.
+
+## Schema Validation
+
+Using Mongoose schema validation to enforce data integrity:
+
+- required fields
+- String formats (e.g., email)
+- Date formats
+- Enum validation for status fields
+- Custom validation for unique constraints (e.g., one standup per user per day)
