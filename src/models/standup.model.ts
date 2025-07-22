@@ -10,7 +10,7 @@ export interface IStandup extends Document {
   date: Date;
   yesterday: string;
   today: string;
-  blockers: string;
+  blockers?: string;
   status: StandupStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -54,7 +54,6 @@ const standupSchema = new Schema<IStandup>(
     },
     blockers: {
       type: String,
-      required: [true, 'Blockers field is required'],
       maxlength: [1000, 'Blockers field cannot exceed 1000 characters'],
       default: 'None',
     },

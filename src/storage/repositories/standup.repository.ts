@@ -87,20 +87,6 @@ export class StandupRepository extends BaseRepository<IStandup> {
       { new: true, upsert: true, runValidators: true }
     ).exec() as Promise<IStandup>;
   }
-
-  // Optional: Keep this for checking if standup exists
-  async findByUserAndDate(userId: string, date: Date): Promise<IStandup | null> {
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(date);
-    endOfDay.setUTCHours(23, 59, 59, 999);
-
-    return this.model.findOne({
-      userId,
-      date: { $gte: startOfDay, $lte: endOfDay }
-    }).exec();
-  }
 }
 
 export const standupRepository = new StandupRepository();

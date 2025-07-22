@@ -19,7 +19,7 @@ export interface UpdateStandupDto {
 
 export interface StandupQueryDto {
   userId?: string;
-  date?: string;
+  date?: string | Date;
   dateFrom?: string;
   dateTo?: string;
   status?: StandupStatus;
