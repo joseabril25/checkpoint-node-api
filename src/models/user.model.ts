@@ -26,6 +26,7 @@ const userSchema = new Schema<IUser>({
     required: true,
     unique: true,
     trim: true,
+    lowercase: true, // Automatically convert email to lowercase
     validate: {
       validator: (email: string) => {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

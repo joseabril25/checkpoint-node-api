@@ -8,7 +8,7 @@ export class UserRepository extends BaseRepository<IUser> {
     super(User);
   }
 
-  async findByEmail(email: string): Promise<IUser | null> {
+  async findByEmail(email: string): Promise<IUser | null> {;
     return this.model.findOne({ email: email.toLowerCase() }).exec();
   }
 
