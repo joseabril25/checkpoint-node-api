@@ -6,7 +6,7 @@ export interface CreateUserDto {
   email: string;
   password: string;
   name: string;
-  timezone: string;
+  timezone?: string;
   profileImage?: string;
 }
 

@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { errorHandler } from './common/middleware';
+import { authRoutes } from './api/auth/auth.routes';
 // import mongoSanitize from 'express-mongo-sanitize';
 // import compression from 'compression';
 // import { errorHandler } from './common/middleware/error.middleware';
@@ -20,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 // app.use(mongoSanitize());
 
 // Routes
-// app.use('/api/v1', routes);
+app.use('/api/v1/auth', authRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

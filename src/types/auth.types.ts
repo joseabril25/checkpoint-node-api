@@ -1,14 +1,5 @@
 import { UserResponseDto } from "./user.types";
 
-
-export interface RegisterDto {
-  email: string;
-  password: string;
-  name: string;
-  timezone: string;
-  profileImage?: string;
-}
-
 export interface LoginDto {
   email: string;
   password: string;
