@@ -12,6 +12,8 @@ export interface PaginationDto {
 }
 
 export interface PaginatedResponseDto<T> {
+  status: number;
+  message: string;
   data: T[];
   pagination: {
     page: number;

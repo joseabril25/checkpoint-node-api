@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import { errorHandler } from './common/middleware';
 // import mongoSanitize from 'express-mongo-sanitize';
 // import compression from 'compression';
 // import { errorHandler } from './common/middleware/error.middleware';
@@ -27,6 +28,6 @@ app.get('/health', (_req, res) => {
 });
 
 // Error handling
-// app.use(errorHandler);
+app.use(errorHandler);
 
 export default app;

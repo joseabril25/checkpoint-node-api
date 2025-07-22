@@ -6,6 +6,7 @@ import app from './app';
 import { connectDatabase } from './storage/database.config';
 import logger from './common/utils/logger';
 
+
 const PORT = process.env['PORT'] || 3001;
 
 const start = async () => {
