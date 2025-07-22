@@ -15,7 +15,6 @@ export interface IUser extends Document {
   comparePassword: (candidatePassword: string) => Promise<boolean>; // Method to compare password for login
 }
 
-
 const userSchema = new Schema<IUser>({
   email: {
     type: String,
