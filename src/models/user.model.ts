@@ -1,13 +1,18 @@
 import { Document, model, Schema } from "mongoose";
 import bcrypt from 'bcryptjs';
 
+export enum UserStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}
+
 export interface IUser extends Document {
   email: string; // Unique email for user authentication              
   password: string; // Hashed password for security 
   name: string;               
   profileImage?: string;
   timezone: string; // e.g., "Auckland/Auckland"
-  status: string; // e.g., "active", "inactive"
+  status: UserStatus; // e.g., "active", "inactive"
   createdAt: Date;
   updatedAt: Date;
 
@@ -52,8 +57,8 @@ const userSchema = new Schema<IUser>({
   },
   status: {
     type: String,
-    enum: ['active', 'inactive'],
-    default: 'active',
+    enum: Object.values(UserStatus),
+    default: UserStatus.ACTIVE,
   },
 }, {
   timestamps: true, // Automatically manage createdAt and updatedAt fields
