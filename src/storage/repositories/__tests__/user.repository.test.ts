@@ -8,7 +8,7 @@ describe('UserRepository', () => {
     email: 'test@example.com',
     password: 'Password123!',
     name: 'Test User',
-    timezone: 'America/New_York',
+    timezone: 'Auckland/Auckland',
   };
 
   // Helper to create a user with unique email
