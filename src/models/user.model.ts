@@ -64,7 +64,6 @@ const userSchema = new Schema<IUser>({
   timestamps: true, // Automatically manage createdAt and updatedAt fields
 });
 
-userSchema.index({ email: 1 });
 userSchema.index({ status: 1 });
 
 userSchema.pre('save', async function (next) {
