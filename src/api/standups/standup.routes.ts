@@ -5,8 +5,11 @@ import { createStandup } from "./standup.controller";
 
 const router = Router();
 
-router.post('/standups',
+router.post('/',
   AuthGuard, // Ensure the user is authenticated
   ValidateDTO(CreateStandupRequestDto), // Validate the request body
   createStandup // Handle the creation of a standup
 );
+
+
+export { router as standupRoutes };
