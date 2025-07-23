@@ -224,4 +224,70 @@ describe('Standup Controller Integration Tests', () => {
       expect(response1.body.data.id).not.toBe(response2.body.data.id);
     });
   });
+
+  describe('PATCH /api/v1/standups/:id', () => {
+    let existingStandup: any;
+
+    beforeEach(async () => {
+      // Create a standup to update
+      const response = await request(app)
+        .post('/api/v1/standups')
+        .set('Cookie', authCookie)
+        .send(testStandupData);
+      
+      existingStandup = response.body.data;
+    });
+
+    it('should update standup successfully', async () => {
+      const updateData = {
+        yesterday: 'Updated yesterday work',
+        today: 'Updated today plan',
+        status: 'submitted'
+      };
+
+      const response = await request(app)
+        .patch(`/api/v1/standups/${existingStandup.id}`)
+        .set('Cookie', authCookie)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        status: 200,
+        message: 'Standup updated successfully',
+        data: {
+          id: existingStandup.id,
+          yesterday: updateData.yesterday,
+          today: updateData.today,
+          status: 'submitted'
+        }
+      });
+    });
+
+    it('should return 401 without authentication', async () => {
+      const response = await request(app)
+        .patch(`/api/v1/standups/${existingStandup.id}`)
+        .send({ yesterday: 'Updated' })
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        status: 401,
+        message: expect.stringContaining('Access token is required')
+      });
+    });
+
+    it('should return 404 for non-existent standup', async () => {
+      const fakeId = '507f1f77bcf86cd799439011';
+      
+      const response = await request(app)
+        .patch(`/api/v1/standups/${fakeId}`)
+        .set('Cookie', authCookie)
+        .send({ yesterday: 'Updated' })
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        status: 404,
+        message: expect.stringContaining('Standup not found')
+      });
+    });
+  });
 });

@@ -124,4 +124,42 @@ describe('StandupService Integration Tests', () => {
         .toThrow(); // Should fail validation
     });
   });
+
+  describe('updateStandup', () => {
+    let existingStandup: any;
+
+    beforeEach(async () => {
+      // Create a standup to update
+      existingStandup = await standupService.createStandup(userId, testStandupData);
+    });
+
+    it('should update standup successfully', async () => {
+      // Arrange
+      const updateData = {
+        yesterday: 'Updated yesterday work',
+        today: 'Updated today plan',
+        status: StandupStatus.SUBMITTED
+      };
+
+      // Act  
+      const result = await standupService.updateStandup(existingStandup.id, userId, updateData);
+
+      // Assert
+      expect(result.yesterday).toBe(updateData.yesterday);
+      expect(result.today).toBe(updateData.today);
+      expect(result.status).toBe('submitted');
+      expect(result.updatedAt).not.toEqual(existingStandup.updatedAt);
+    });
+
+    it('should throw 404 for non-existent standup', async () => {
+      // Arrange
+      const fakeId = '507f1f77bcf86cd799439011';
+      const updateData = { yesterday: 'Updated' };
+
+      // Act & Assert
+      await expect(standupService.updateStandup(fakeId, userId, updateData))
+        .rejects
+        .toThrow(/Standup not found/);
+    });
+  });
 });
