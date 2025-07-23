@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { AuthGuard, ValidateDTO } from "@/common/middleware";
-import { CreateStandupRequestDto, StandupParamsDto, UpdateStandupRequestDto } from "./DTOs/standup.dto";
-import { createStandup, updateStandup } from "./standup.controller";
+import { CreateStandupRequestDto, StandupParamsDto, UpdateStandupRequestDto, GetStandupsQueryDto } from "./DTOs/standup.dto";
+import { createStandup, updateStandup, getStandups } from "./standup.controller";
 
 const router = Router();
 
@@ -16,6 +16,12 @@ router.patch('/:id',
   ValidateDTO(StandupParamsDto, 'params'), // Validate the request params
   ValidateDTO(UpdateStandupRequestDto), 
   updateStandup
+);
+
+router.get('/',
+  AuthGuard,
+  ValidateDTO(GetStandupsQueryDto, 'query'),
+  getStandups
 );
 
 export { router as standupRoutes };

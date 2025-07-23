@@ -2,7 +2,6 @@ import request from 'supertest';
 import app from '../../../app';
 import { User } from '../../../models';
 import { JwtUtils } from '../../../common/utils';
-import { standupRoutes } from '../standup.routes';
 import createError from 'http-errors';
 
 // Mock JWT utilities
@@ -32,9 +31,6 @@ describe('Standup Controller Integration Tests', () => {
   };
 
   beforeAll(async () => {
-    // Setup routes
-    app.use('/api/v1/standups', standupRoutes);
-
     // Create test user
     testUser = await User.create(testUserData);
 
@@ -287,6 +283,179 @@ describe('Standup Controller Integration Tests', () => {
       expect(response.body).toMatchObject({
         status: 404,
         message: expect.stringContaining('Standup not found')
+      });
+    });
+  });
+
+  describe('GET /api/v1/standups', () => {
+    let user1: any, user2: any;
+    let user1Standup: any, user2Standup: any;
+
+    beforeEach(async () => {
+      // Create test users
+      user1 = await User.create({
+        email: 'user1@example.com',
+        password: 'password123',
+        name: 'User One',
+        timezone: 'UTC'
+      });
+
+      user2 = await User.create({
+        email: 'user2@example.com',
+        password: 'password123',
+        name: 'User Two',
+        timezone: 'UTC'
+      });
+
+      // Create today's standups
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+
+      // Mock JWT for user1
+      (JwtUtils.verifyToken as jest.Mock).mockReturnValue({
+        userId: user1.id,
+        email: user1.email
+      });
+
+      // Create standups for today
+      user1Standup = await request(app)
+        .post('/api/v1/standups')
+        .set('Cookie', authCookie)
+        .send({
+          ...testStandupData,
+          date: today.toISOString(),
+          yesterday: 'User1 today work'
+        });
+
+      // Switch to user2 
+      (JwtUtils.verifyToken as jest.Mock).mockReturnValue({
+        userId: user2.id,
+        email: user2.email
+      });
+
+      user2Standup = await request(app)
+        .post('/api/v1/standups')
+        .set('Cookie', authCookie)
+        .send({
+          ...testStandupData,
+          date: today.toISOString(),
+          yesterday: 'User2 today work'
+        });
+
+      // Create yesterday's standup for user1
+      (JwtUtils.verifyToken as jest.Mock).mockReturnValue({
+        userId: user1.id,
+        email: user1.email
+      });
+
+      await request(app)
+        .post('/api/v1/standups')
+        .set('Cookie', authCookie)
+        .send({
+          ...testStandupData,
+          date: yesterday.toISOString(),
+          yesterday: 'User1 yesterday work'
+        });
+    });
+
+    describe('Team View', () => {
+      it('should show today\'s standups for all users (default)', async () => {
+        const response = await request(app)
+          .get('/api/v1/standups')
+          .set('Cookie', authCookie)
+          .expect(200);
+
+        expect(response.body.data).toHaveLength(2);
+        expect(response.body.data).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ yesterday: 'User1 today work' }),
+            expect.objectContaining({ yesterday: 'User2 today work' })
+          ])
+        );
+      });
+
+      it('should show provided date\'s standups for all users (date filtered)', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const dateString = yesterday.toISOString().split('T')[0];
+
+        const response = await request(app)
+          .get(`/api/v1/standups?date=${dateString}`)
+          .set('Cookie', authCookie)
+          .expect(200);
+
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0]).toMatchObject({
+          yesterday: 'User1 yesterday work'
+        });
+      });
+
+      it('should show all user\'s standups from latest date (user filtered)', async () => {
+        const response = await request(app)
+          .get(`/api/v1/standups?userId=${user1.id}`)
+          .set('Cookie', authCookie)
+          .expect(200);
+
+        expect(response.body.data).toHaveLength(2);
+        expect(response.body.data.every((s: any) => s.userId === user1.id)).toBe(true);
+      });
+
+      it('should show user\'s standup for specified date (user and date filtered)', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const dateString = yesterday.toISOString().split('T')[0];
+
+        const response = await request(app)
+          .get(`/api/v1/standups?userId=${user1.id}&date=${dateString}`)
+          .set('Cookie', authCookie)
+          .expect(200);
+
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0]).toMatchObject({
+          userId: user1.id,
+          yesterday: 'User1 yesterday work'
+        });
+      });
+    });
+
+    describe('History View', () => {
+      it('should show logged in user\'s standups from latest (default history)', async () => {
+        // Mock as user1 to get their history
+        (JwtUtils.verifyToken as jest.Mock).mockReturnValue({
+          userId: user1.id,
+          email: user1.email
+        });
+
+        const response = await request(app)
+          .get(`/api/v1/standups?userId=${user1.id}`)
+          .set('Cookie', authCookie)
+          .expect(200);
+
+        expect(response.body.data).toHaveLength(2);
+        expect(response.body.data.every((s: any) => s.userId === user1.id)).toBe(true);
+        
+        // Should be sorted by date desc (latest first)
+        const dates = response.body.data.map((s: any) => new Date(s.date));
+        expect(dates[0] >= dates[1]).toBe(true);
+      });
+
+      it('should show user\'s standups on date filtered (history with date)', async () => {
+        const today = new Date();
+        const dateString = today.toISOString().split('T')[0];
+
+        const response = await request(app)
+          .get(`/api/v1/standups?userId=${user1.id}&date=${dateString}`)
+          .set('Cookie', authCookie)
+          .expect(200);
+
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0]).toMatchObject({
+          userId: user1.id,
+          yesterday: 'User1 today work'
+        });
       });
     });
   });

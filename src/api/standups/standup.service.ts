@@ -1,7 +1,8 @@
 import createError from 'http-errors';
 import { StandupRepository } from "@/storage/repositories";
-import { CreateStandupDto, StandupResponseDto, UpdateStandupDto } from "@/types";
+import { CreateStandupDto, StandupOrderField, StandupQueryDto, StandupResponseDto, StandupSortField, UpdateStandupDto } from "@/types";
 import { IStandup } from '@/models';
+import { GetStandupsQueryDto } from './DTOs/standup.dto';
 
 
 export class StandupService {
@@ -75,5 +76,43 @@ export class StandupService {
       createdAt: updatedStandup.createdAt,
       updatedAt: updatedStandup.updatedAt
     };
+  }
+
+  async getStandups(queryParams: GetStandupsQueryDto) {
+    const {
+      userId,
+      date,
+      dateFrom,
+      dateTo,
+      status,
+      page = 1,
+      limit = 20,
+      sort = StandupSortField.DATE,
+      order = StandupOrderField.DESC
+    } = queryParams;
+
+    // Build query
+    const query: StandupQueryDto = {
+      userId,
+      date,
+      dateFrom,
+      dateTo,
+      status,
+      page: page,
+      limit: limit,
+      sort,
+      order
+    };
+
+    // If no filters applied, default to team view (today's standups for all team members)
+    if (!userId && !date && !dateFrom && !dateTo) {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      query.date = today.toISOString().split('T')[0];
+    }
+
+    const result = await this.standupRepository.findStandups(query);
+
+    return result;
   }
 }

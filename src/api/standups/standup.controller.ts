@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ApiResponse, asyncHandler } from "@/common/utils";
 import { StandupService } from "./standup.service";
-import { UpdateStandupRequestDto, CreateStandupRequestDto, StandupParamsDto } from './DTOs/standup.dto';
+import { UpdateStandupRequestDto, CreateStandupRequestDto, StandupParamsDto, GetStandupsQueryDto } from './DTOs/standup.dto';
 
 const standupService = new StandupService();
 
@@ -25,5 +25,15 @@ export const updateStandup = asyncHandler(
     const updatedStandup = await standupService.updateStandup(standupId!, userId, updateData);
 
     ApiResponse.success(res, updatedStandup, "Standup updated successfully");
+  }
+);
+
+export const getStandups = asyncHandler(
+  async (req: Request<{}, {}, {}, GetStandupsQueryDto>, res: Response) => {
+    const queryParams = req.query;
+
+    const result = await standupService.getStandups(queryParams);
+
+    ApiResponse.paginated(res, result.data, result.pagination, "Standups retrieved successfully");
   }
 );

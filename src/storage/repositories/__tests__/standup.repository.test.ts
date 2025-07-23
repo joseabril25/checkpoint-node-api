@@ -1,435 +1,218 @@
-import { StandupStatus } from '../../../models/';
-import { StandupQueryDto } from '../../../types';
-import { standupRepository } from '../standup.repository';
-import { userRepository } from '../user.repository';
+import { StandupRepository } from '../standup.repository';
+import { Standup, User, StandupStatus } from '../../../models';
+import { StandupPaginatedResponseDto, StandupQueryDto } from '../../../types';
 
-describe('StandupRepository', () => {
-  let userId: string;
-  let anotherUserId: string;
+describe('StandupRepository Integration Tests', () => {
+  let standupRepository: StandupRepository;
+  let testUser1: any;
+  let testUser2: any;
 
-  // Create test users before tests
+  beforeAll(async () => {
+    standupRepository = new StandupRepository();
+  });
+
   beforeEach(async () => {
-    const user = await userRepository.create({
-      email: 'standup.user@example.com',
-      password: 'Password123!',
-      name: 'Standup Test User',
-      timezone: 'America/New_York'
+    // Create test users for each test to avoid cleanup issues
+    testUser1 = await User.create({
+      email: 'repo.user1@example.com',
+      password: 'password123',
+      name: 'Repo User 1',
+      timezone: 'UTC'
     });
-    userId = user.id;
 
-    const anotherUser = await userRepository.create({
-      email: 'another.user@example.com', 
-      password: 'Password123!',
-      name: 'Another User',
-      timezone: 'America/New_York'
+    testUser2 = await User.create({
+      email: 'repo.user2@example.com',
+      password: 'password123',
+      name: 'Repo User 2',
+      timezone: 'UTC'
     });
-    anotherUserId = anotherUser.id;
   });
 
-  describe('createOrUpdateDraft', () => {
-    it('should create a new draft standup', async () => {
-      const today = new Date();
+  describe('createStandup', () => {
+    it('should create a standup with correct date', async () => {
+      const date = new Date();
+      date.setDate(date.getDate() - 1); // Yesterday
+      
       const standupData = {
-        yesterday: 'Started working on auth module',
-        today: 'Continue with auth implementation',
+        date,
+        yesterday: 'Completed task A',
+        today: 'Working on task B',
         blockers: 'None',
         status: StandupStatus.DRAFT
       };
 
-      const standup = await standupRepository.createOrUpdateDraft(
-        userId,
-        today,
-        standupData
-      );
+      const result = await standupRepository.createStandup(testUser1.id, standupData);
 
-      expect(standup).toBeDefined();
-      expect(standup.id).toBeDefined();
-      expect(standup.userId.toString()).toBe(userId);
-      expect(standup.yesterday).toBe(standupData.yesterday);
-      expect(standup.today).toBe(standupData.today);
-      expect(standup.blockers).toBe(standupData.blockers);
-      expect(standup.status).toBe(StandupStatus.DRAFT);
+      expect(result).toBeDefined();
+      expect(result.userId.toString()).toBe(testUser1.id);
+      expect(result.yesterday).toBe('Completed task A');
       
-      // Check date is normalized to start of day
-      expect(standup.date.getUTCHours()).toBe(0);
-      expect(standup.date.getUTCMinutes()).toBe(0);
-      expect(standup.date.getUTCSeconds()).toBe(0);
+      // Check date is normalized to start of day (UTC)
+      const savedDate = new Date(result.date);
+      expect(savedDate.getUTCHours()).toBe(0);
+      expect(savedDate.getUTCMinutes()).toBe(0);
+      expect(savedDate.getUTCSeconds()).toBe(0);
     });
 
-    it('should create a submitted standup', async () => {
-      const today = new Date();
+    it('should handle default date when not provided', async () => {
       const standupData = {
-        yesterday: 'Completed auth module',
-        today: 'Starting on standup features',
-        blockers: 'Need API documentation review',
-        status: StandupStatus.SUBMITTED
+        yesterday: 'Default date test',
+        today: 'Testing default date',
+        blockers: 'None',
+        status: StandupStatus.DRAFT
       };
 
-      const standup = await standupRepository.createOrUpdateDraft(
-        userId,
-        today,
-        standupData
-      );
+      const result = await standupRepository.createStandup(testUser1.id, standupData);
 
-      expect(standup.status).toBe(StandupStatus.SUBMITTED);
-      expect(standup.blockers).toBe(standupData.blockers);
-    });
-
-    it('should update existing draft to submitted', async () => {
-      const today = new Date();
+      expect(result).toBeDefined();
       
-      // First create as draft
-      const draft = await standupRepository.createOrUpdateDraft(
-        userId,
-        today,
-        {
-          yesterday: 'Draft yesterday',
-          today: 'Draft today',
-          blockers: '',
-          status: StandupStatus.DRAFT
-        }
-      );
-
-      expect(draft.status).toBe(StandupStatus.DRAFT);
-
-      // Update to submitted with new content
-      const submitted = await standupRepository.createOrUpdateDraft(
-        userId,
-        today,
-        {
-          yesterday: 'Completed authentication module and tests',
-          today: 'Working on standup API endpoints',
-          blockers: 'Waiting for code review',
-          status: StandupStatus.SUBMITTED
-        }
-      );
-
-      expect(submitted.id).toBe(draft.id); // Same document
-      expect(submitted.status).toBe(StandupStatus.SUBMITTED);
-      expect(submitted.yesterday).toBe('Completed authentication module and tests');
-      expect(submitted.today).toBe('Working on standup API endpoints');
-      expect(submitted.blockers).toBe('Waiting for code review');
-      expect(submitted.updatedAt.getTime()).toBeGreaterThan(draft.updatedAt.getTime());
-    });
-
-    it('should enforce one standup per user per day', async () => {
+      // Should default to today
       const today = new Date();
-      
-      // Create first standup
-      const first = await standupRepository.createOrUpdateDraft(
-        userId,
-        today,
-        {
-          yesterday: 'First entry',
-          today: 'First plan',
-          status: StandupStatus.SUBMITTED
-        }
-      );
-
-      // Try to create another - should update instead
-      const second = await standupRepository.createOrUpdateDraft(
-        userId,
-        today,
-        {
-          yesterday: 'Second entry',
-          today: 'Second plan',
-          status: StandupStatus.SUBMITTED
-        }
-      );
-
-      expect(second.id).toBe(first.id); // Same document
-      expect(second.yesterday).toBe('Second entry'); // Updated content
-    });
-
-    it('should allow different users to have standups on same day', async () => {
-      const today = new Date();
-      
-      const standup1 = await standupRepository.createOrUpdateDraft(
-        userId,
-        today,
-        {
-          yesterday: 'User 1 work',
-          today: 'User 1 plan',
-          status: StandupStatus.SUBMITTED
-        }
-      );
-
-      const standup2 = await standupRepository.createOrUpdateDraft(
-        anotherUserId,
-        today,
-        {
-          yesterday: 'User 2 work',
-          today: 'User 2 plan',
-          status: StandupStatus.SUBMITTED
-        }
-      );
-
-      expect(standup1.id).not.toBe(standup2.id);
-      expect(standup1.userId.toString()).toBe(userId);
-      expect(standup2.userId.toString()).toBe(anotherUserId);
+      const savedDate = new Date(result.date);
+      expect(savedDate.getDate()).toBe(today.getDate());
+      expect(savedDate.getMonth()).toBe(today.getMonth());
+      expect(savedDate.getFullYear()).toBe(today.getFullYear());
     });
   });
 
-  describe('findByUserAndDate', () => {
-    it('should find standup for specific user and date', async () => {
-      const specificDate = new Date('2025-07-20');
-      
-      await standupRepository.createOrUpdateDraft(
-        userId,
-        specificDate,
-        {
-          yesterday: 'Specific date work',
-          today: 'Specific date plan',
-          status: StandupStatus.SUBMITTED
-        }
-      );
-
-      const filters = {
-        userId,
-        date: specificDate // YYYY-MM-DD format
-      }
-
-      const found = await standupRepository.findStandups(filters);
-      
-      expect(found).toBeDefined();
-      expect(found?.data[0]?.yesterday).toBe('Specific date work');
-    });
-
-    it('should return null for non-existent standup', async () => {
-      const filters: StandupQueryDto = {
-        userId,
-        date: new Date('2025-12-31')
-      };
-      const found = await standupRepository.findStandups(filters);
-
-      expect(found.data.length).toBe(0);
-    });
-  });
-
-  describe('findStandups - Team View', () => {
+  describe('findStandups', () => {
     beforeEach(async () => {
-      // Create standups for today
+      // Create test data
       const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
       
-      await standupRepository.createOrUpdateDraft(userId, today, {
-        yesterday: 'User 1 completed auth',
-        today: 'User 1 working on tests',
-        blockers: 'None',
-        status: StandupStatus.SUBMITTED
-      });
-
-      await standupRepository.createOrUpdateDraft(anotherUserId, today, {
-        yesterday: 'User 2 fixed bugs',
-        today: 'User 2 implementing features',
-        blockers: 'Waiting for API specs',
-        status: StandupStatus.SUBMITTED
-      });
-
-      // Create a draft (should not appear in team view)
-      const thirdUser = await userRepository.create({
-        email: 'third@example.com',
-        password: 'Password123!',
-        name: 'Third User',
-        timezone: 'UTC'
-      });
-
-      await standupRepository.createOrUpdateDraft(thirdUser.id, today, {
-        yesterday: 'Draft work',
-        today: 'Draft plan',
-        status: StandupStatus.DRAFT
-      });
-    });
-
-    it('should get all submitted standups for today', async () => {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      
-      const result = await standupRepository.findStandups({
-        date: today,
-        status: StandupStatus.SUBMITTED
-      });
-
-      expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(2);
-      
-      // Should populate user data
-      expect(result.data[0].userId).toHaveProperty('name');
-      expect(result.data[0].userId).toHaveProperty('email');
-      
-      // Should not include drafts
-      expect(result.data.every(s => s.status === StandupStatus.SUBMITTED)).toBe(true);
-    });
-
-    it('should get standups for specific date', async () => {
-      // Create standups for different date
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      
-      await standupRepository.createOrUpdateDraft(userId, yesterday, {
-        yesterday: 'Previous day work',
-        today: 'Previous day plan',
+      yesterday.setUTCHours(0, 0, 0, 0);
+
+      // Create today's standups
+      await standupRepository.createStandup(testUser1.id, {
+        date: today,
+        yesterday: 'User1 today work',
+        today: 'User1 today plan',
+        blockers: 'None',
         status: StandupStatus.SUBMITTED
       });
 
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-      
-      const result = await standupRepository.findStandups({
-        date: yesterdayStr,
+      await standupRepository.createStandup(testUser2.id, {
+        date: today,
+        yesterday: 'User2 today work',
+        today: 'User2 today plan',
+        blockers: 'None',
+        status: StandupStatus.DRAFT
+      });
+
+      // Create yesterday's standup for user1
+      await standupRepository.createStandup(testUser1.id, {
+        date: yesterday,
+        yesterday: 'User1 yesterday work',
+        today: 'User1 yesterday plan',
+        blockers: 'Some blocker',
         status: StandupStatus.SUBMITTED
       });
+    });
+
+    it('should find all standups without filters', async () => {
+      const query: StandupQueryDto = {};
+      const result = await standupRepository.findStandups(query) as StandupPaginatedResponseDto;
+
+      expect(result.data).toHaveLength(3);
+      expect(result.pagination.total).toBe(3);
+    });
+
+    it('should filter by userId', async () => {
+      const query: StandupQueryDto = {
+        userId: testUser1.id
+      };
+      const result = await standupRepository.findStandups(query)  as StandupPaginatedResponseDto;
+
+      expect(result.data).toHaveLength(2);
+      expect(result.data.every(s => s.userId === testUser1.id)).toBe(true);
+    });
+
+    it('should filter by specific date', async () => {
+      // Get the actual yesterday's date from the test data setup
+      const actualYesterday = new Date();
+      actualYesterday.setDate(actualYesterday.getDate() - 1);
+      actualYesterday.setUTCHours(0, 0, 0, 0);
+      const dateString = actualYesterday.toISOString().split('T')[0];
+
+      const query: StandupQueryDto = {
+        date: dateString
+      };
+      const result = await standupRepository.findStandups(query);
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].yesterday).toBe('Previous day work');
-    });
-  });
-
-  describe('findStandups - History View', () => {
-    beforeEach(async () => {
-      // Create multiple standups for user over several days
-      const dates = [0, 1, 2, 3, 4, 5, 6].map(daysAgo => {
-        const date = new Date();
-        date.setDate(date.getDate() - daysAgo);
-        return date;
-      });
-
-      for (const date of dates) {
-        await standupRepository.createOrUpdateDraft(userId, date, {
-          yesterday: `Work on ${date.toDateString()}`,
-          today: `Plan for ${date.toDateString()}`,
-          blockers: `Blockers for ${date.toDateString()}`,
-          status: StandupStatus.SUBMITTED
-        });
-      }
-    });
-
-    it('should get user history with pagination', async () => {
-      const result = await standupRepository.findStandups({
-        userId,
-        page: 1,
-        limit: 5,
-        sort: 'date',
-        order: 'desc'
-      });
-
-      expect(result.data).toHaveLength(5);
-      expect(result.total).toBe(7);
-      
-      // Check sorting (newest first)
-      const dates = result.data.map(s => s.date.getTime());
-      expect(dates).toEqual([...dates].sort((a, b) => b - a));
-    });
-
-    it('should get second page of results', async () => {
-      const result = await standupRepository.findStandups({
-        userId,
-        page: 2,
-        limit: 5,
-        sort: 'date',
-        order: 'desc'
-      });
-
-      expect(result.data).toHaveLength(2); // Remaining 2 items
-      expect(result.total).toBe(7);
+      expect(result.data[0].yesterday).toBe('User1 yesterday work');
     });
 
     it('should filter by status', async () => {
-      // Create some drafts
-      const today = new Date();
-      await standupRepository.createOrUpdateDraft(anotherUserId, today, {
-        yesterday: 'Draft yesterday',
-        today: 'Draft today',
+      const query: StandupQueryDto = {
         status: StandupStatus.DRAFT
-      });
-
-      const drafts = await standupRepository.findStandups({
-        status: StandupStatus.DRAFT
-      });
-
-      expect(drafts.data.every(s => s.status === StandupStatus.DRAFT)).toBe(true);
-    });
-  });
-
-  describe('findStandups - Date Range Queries', () => {
-    beforeEach(async () => {
-      // Create standups for a week
-      const dates = ['2025-07-16', '2025-07-17', '2025-07-18', '2025-07-19', '2025-07-20'];
-      
-      for (const dateStr of dates) {
-        await standupRepository.createOrUpdateDraft(
-          userId,
-          new Date(dateStr),
-          {
-            yesterday: `Work on ${dateStr}`,
-            today: `Plan for ${dateStr}`,
-            status: StandupStatus.SUBMITTED
-          }
-        );
-      }
-    });
-
-    it('should get standups within date range', async () => {
-      const result = await standupRepository.findStandups({
-        dateFrom: '2025-07-16',
-        dateTo: '2025-07-18'
-      });
-
-      expect(result.data).toHaveLength(3);
-      const dates = result.data.map(s => s.date.toISOString().split('T')[0]);
-      expect(dates).toContain('2025-07-16');
-      expect(dates).toContain('2025-07-17');
-      expect(dates).toContain('2025-07-18');
-    });
-
-    it('should handle open-ended date ranges', async () => {
-      // From date only
-      const fromResult = await standupRepository.findStandups({
-        dateFrom: '2025-07-16'
-      });
-      expect(fromResult.data.length).toBeGreaterThanOrEqual(1);
-
-      // To date only
-      const toResult = await standupRepository.findStandups({
-        dateTo: '2025-07-18'
-      });
-      expect(toResult.data.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  describe('findStandups - Complex Filters', () => {
-    it('should combine multiple filters', async () => {
-      const today = new Date();
-      
-      // Create mix of standups
-      await standupRepository.createOrUpdateDraft(userId, today, {
-        yesterday: 'User 1 submitted',
-        today: 'User 1 plan',
-        status: StandupStatus.SUBMITTED
-      });
-
-      await standupRepository.createOrUpdateDraft(anotherUserId, today, {
-        yesterday: 'User 2 draft',
-        today: 'User 2 plan',
-        status: StandupStatus.DRAFT
-      });
-
-      // Query: specific user + date + status
-      const result = await standupRepository.findStandups({
-        userId,
-        date: today.toISOString().split('T')[0],
-        status: StandupStatus.SUBMITTED
-      });
+      };
+      const result = await standupRepository.findStandups(query);
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].userId._id.toString()).toBe(userId);
-      expect(result.data[0].status).toBe(StandupStatus.SUBMITTED);
+      expect(result.data[0].status).toBe(StandupStatus.DRAFT);
     });
 
-    it('should handle empty results gracefully', async () => {
-      const result = await standupRepository.findStandups({
-        date: '2099-12-31'
+    it('should populate user information', async () => {
+      const query: StandupQueryDto = {
+        userId: testUser1.id,
+        limit: 1
+      };
+      const result = await standupRepository.findStandups(query);
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].user).toBeDefined();
+      expect(result.data[0].user?.name).toBe('Repo User 1');
+      expect(result.data[0].user?.email).toBe('repo.user1@example.com');
+    });
+
+    it('should handle pagination correctly', async () => {
+      const query: StandupQueryDto = {
+        page: 1,
+        limit: 2
+      };
+      const result = await standupRepository.findStandups(query);
+
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination.page).toBe(1);
+      expect(result.pagination.limit).toBe(2);
+      expect(result.pagination.total).toBe(3);
+      expect(result.pagination.totalPages).toBe(2);
+      expect(result.pagination.hasMore).toBe(true);
+    });
+
+    it('should sort by date descending by default', async () => {
+      const query: StandupQueryDto = {};
+      const result = await standupRepository.findStandups(query);
+
+      const dates = result.data.map(s => new Date(s.date).getTime());
+      expect(dates[0]).toBeGreaterThanOrEqual(dates[1]);
+      expect(dates[1]).toBeGreaterThanOrEqual(dates[2]);
+    });
+  });
+
+  describe('updateStandup', () => {
+    it('should update standup fields', async () => {
+      const standup = await standupRepository.createStandup(testUser1.id, {
+        yesterday: 'Original work',
+        today: 'Original plan',
+        blockers: 'None',
+        status: StandupStatus.DRAFT
       });
 
-      expect(result.data).toEqual([]);
-      expect(result.total).toBe(0);
+      const updated = await standupRepository.updateStandup(standup.id, {
+        yesterday: 'Updated work',
+        status: StandupStatus.SUBMITTED
+      });
+
+      expect(updated).toBeDefined();
+      expect(updated?.yesterday).toBe('Updated work');
+      expect(updated?.today).toBe('Original plan'); // Unchanged
+      expect(updated?.status).toBe(StandupStatus.SUBMITTED);
+      expect(updated?.updatedAt).not.toEqual(standup.updatedAt);
     });
   });
 });

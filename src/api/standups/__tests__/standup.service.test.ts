@@ -16,7 +16,6 @@ describe('StandupService Integration Tests', () => {
   };
 
   const testStandupData: CreateStandupDto = {
-    date: new Date(),
     yesterday: 'Completed authentication module',
     today: 'Working on standup functionality',
     blockers: 'None',
@@ -160,6 +159,161 @@ describe('StandupService Integration Tests', () => {
       await expect(standupService.updateStandup(fakeId, userId, updateData))
         .rejects
         .toThrow(/Standup not found/);
+    });
+  });
+
+  describe('getStandups', () => {
+    let user1: any, user2: any;
+    let user1Id: string, user2Id: string;
+
+    beforeEach(async () => {
+      // Create test users
+      user1 = await User.create({
+        email: 'user1@example.com',
+        password: 'password123',
+        name: 'User One',
+        timezone: 'UTC'
+      });
+
+      user2 = await User.create({
+        email: 'user2@example.com',
+        password: 'password123',
+        name: 'User Two',
+        timezone: 'UTC'
+      });
+
+      user1Id = user1.id;
+      user2Id = user2.id;
+
+      // Create standups for different dates
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setUTCHours(0, 0, 0, 0);
+
+      // Create today's standups for both users
+      await standupService.createStandup(user1Id, {
+        ...testStandupData,
+        date: today,
+        yesterday: 'User1 today work'
+      });
+
+      await standupService.createStandup(user2Id, {
+        ...testStandupData,
+        date: today,
+        yesterday: 'User2 today work'
+      });
+
+      // Create yesterday's standup for user1 
+      await standupService.createStandup(user1Id, {
+        ...testStandupData,
+        date: yesterday,
+        yesterday: 'User1 yesterday work'
+      });
+    });
+
+    describe('Team View', () => {
+      it('should show today\'s standups for all users (default)', async () => {
+        const result = await standupService.getStandups({});
+
+        expect(result.data).toHaveLength(2);
+        expect(result.data).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ yesterday: 'User1 today work' }),
+            expect.objectContaining({ yesterday: 'User2 today work' })
+          ])
+        );
+      });
+
+      it('should show provided date\'s standups for all users (date filtered)', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const dateString = yesterday.toISOString().split('T')[0];
+
+        const result = await standupService.getStandups({ date: dateString });
+
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0]).toMatchObject({
+          yesterday: 'User1 yesterday work'
+        });
+      });
+
+      it('should show all user\'s standups from latest date (user filtered)', async () => {
+        const result = await standupService.getStandups({ userId: user1Id });
+
+        expect(result.data).toHaveLength(2);
+        expect(result.data.every((s: any) => s.userId === user1Id)).toBe(true);
+      });
+
+      it('should show user\'s standup for specified date (user and date filtered)', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const dateString = yesterday.toISOString().split('T')[0];
+
+        const result = await standupService.getStandups({ 
+          userId: user1Id, 
+          date: dateString 
+        });
+
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0]).toMatchObject({
+          userId: user1Id,
+          yesterday: 'User1 yesterday work'
+        });
+      });
+    });
+
+    describe('History View', () => {
+      it('should show user\'s standups from latest (user history)', async () => {
+        const result = await standupService.getStandups({ userId: user1Id });
+
+        expect(result.data).toHaveLength(2);
+        expect(result.data.every((s: any) => s.userId === user1Id)).toBe(true);
+      });
+
+      it('should show user\'s standups on date filtered (history with date)', async () => {
+        const today = new Date();
+        const dateString = today.toISOString().split('T')[0];
+
+        const result = await standupService.getStandups({ 
+          userId: user1Id, 
+          date: dateString 
+        });
+
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0]).toMatchObject({
+          userId: user1Id,
+          yesterday: 'User1 today work'
+        });
+      });
+    });
+
+    describe('Pagination', () => {
+      it('should return pagination metadata', async () => {
+        const result = await standupService.getStandups({ limit: 1 });
+
+        expect(result.pagination).toMatchObject({
+          page: 1,
+          limit: 1,
+          total: expect.any(Number),
+          totalPages: expect.any(Number),
+          hasMore: expect.any(Boolean)
+        });
+      });
+
+      it('should handle page and limit parameters', async () => {
+        const result = await standupService.getStandups({ 
+          userId: user1Id,
+          page: 1,
+          limit: 1
+        });
+
+        expect(result.data).toHaveLength(1);
+        expect(result.pagination.page).toBe(1);
+        expect(result.pagination.limit).toBe(1);
+      });
     });
   });
 });

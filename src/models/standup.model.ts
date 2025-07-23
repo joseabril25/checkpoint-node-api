@@ -83,7 +83,7 @@ standupSchema.index({ status: 1 });
 standupSchema.pre('save', function (next) {
   if (this.date) {
     const date = new Date(this.date);
-    date.setHours(0, 0, 0, 0);
+    date.setUTCHours(0, 0, 0, 0);
     this.date = date;
   }
   next();

@@ -17,6 +17,16 @@ export interface UpdateStandupDto {
   status?: StandupStatus;
 }
 
+export enum StandupSortField {
+  DATE = 'date',
+  CREATED_AT = 'createdAt',
+  UPDATED_AT = 'updatedAt'
+}
+
+export enum StandupOrderField {
+  ASC = 'asc',
+  DESC = 'desc'
+}
 export interface StandupQueryDto {
   userId?: string;
   date?: string | Date;
@@ -25,8 +35,8 @@ export interface StandupQueryDto {
   status?: StandupStatus;
   page?: number;
   limit?: number;
-  sort?: 'date' | 'createdAt' | 'updatedAt';
-  order?: 'asc' | 'desc';
+  sort?: StandupSortField;
+  order?: StandupOrderField;
 }
 
 export interface StandupResponseDto extends BaseEntityDto {

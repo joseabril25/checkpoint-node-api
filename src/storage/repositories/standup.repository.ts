@@ -1,6 +1,6 @@
 import { BaseRepository } from './base.repository';
 import { Standup, IStandup } from '../../models';
-import { CreateStandupDto, StandupQueryDto, UpdateStandupDto } from '@/types';
+import { CreateStandupDto, StandupQueryDto, StandupResponseDto, UpdateStandupDto, StandupPaginatedResponseDto } from '@/types';
 import { FilterQuery } from 'mongoose';
 
 export class StandupRepository extends BaseRepository<IStandup> {
@@ -8,10 +8,7 @@ export class StandupRepository extends BaseRepository<IStandup> {
     super(Standup);
   }
 
-  async findStandups(query: StandupQueryDto): Promise<{
-    data: IStandup[];
-    total: number;
-  }> {
+  async findStandups(query: StandupQueryDto): Promise<StandupPaginatedResponseDto> {
     const {
       userId,
       date,
@@ -19,7 +16,7 @@ export class StandupRepository extends BaseRepository<IStandup> {
       dateTo,
       status,
       page = 1,
-      limit = 20,
+      limit = 10,
       sort = 'date',
       order = 'desc'
     } = query;
@@ -62,18 +59,48 @@ export class StandupRepository extends BaseRepository<IStandup> {
     const skip = (page - 1) * limit;
     const sortOrder = order === 'asc' ? 1 : -1;
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.model
         .find(filter)
         .sort({ [sort]: sortOrder })
         .limit(limit)
         .skip(skip)
         .populate('userId', 'name email profileImage')
+        .lean()
         .exec(),
       this.model.countDocuments(filter).exec()
     ]);
 
-    return { data, total };
+    // Transform raw mongoose documents to StandupResponseDto format
+    const data: StandupResponseDto[] = rawData.map((standup: any) => ({
+      id: standup._id.toString(),
+      userId: standup.userId?._id?.toString() || standup.userId?.toString() || '',
+      date: standup.date,
+      yesterday: standup.yesterday,
+      today: standup.today,
+      blockers: standup.blockers,
+      status: standup.status,
+      createdAt: standup.createdAt,
+      updatedAt: standup.updatedAt,
+      user: (standup.userId && typeof standup.userId === 'object' && standup.userId._id) ? {
+        id: standup.userId._id.toString(),
+        name: standup.userId.name,
+        email: standup.userId.email,
+        profileImage: standup.userId.profileImage || undefined
+      } : undefined
+    }));
+
+    // Return complete StandupPaginatedResponseDto
+    return {
+      data,
+      pagination: {
+        page: page!,
+        limit: limit!,
+        total,
+        totalPages: Math.ceil(total / limit!),
+        hasMore: page! < Math.ceil(total / limit!)
+      }
+    };
   }
 
   async createStandup(userId: string, data: CreateStandupDto): Promise<IStandup> {

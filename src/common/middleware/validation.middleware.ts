@@ -27,7 +27,7 @@ export const ValidateDTO = <T extends object>(
       } else if (source === 'params') {
         req.params = dto as any;
       } else if (source === 'query') {
-        req.query = dto as any;
+        Object.assign(req.query, dto);
       }
       next();
     } catch (error) {

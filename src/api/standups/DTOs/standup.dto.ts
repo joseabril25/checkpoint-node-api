@@ -1,5 +1,5 @@
-import { IsEnum, IsOptional, IsString, Length, IsMongoId } from "class-validator";
-import { CreateStandupDto, UpdateStandupDto } from "@/types";
+import { IsEnum, IsOptional, IsString, Length, IsMongoId, IsNumber } from "class-validator";
+import { CreateStandupDto, StandupOrderField, StandupQueryDto, StandupSortField, UpdateStandupDto } from "@/types";
 import { StandupStatus } from "../../../models";
 
 export class CreateStandupRequestDto implements CreateStandupDto {
@@ -45,4 +45,42 @@ export class UpdateStandupRequestDto implements UpdateStandupDto {
 export class StandupParamsDto {
   @IsMongoId({ message: 'Invalid standup ID format' })
   id?: string;
+}
+
+export class GetStandupsQueryDto implements StandupQueryDto {
+  @IsOptional()
+  @IsMongoId({ message: 'Invalid user ID format' })
+  userId?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Date must be a valid string' })
+  date?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Date from must be a valid string' })
+  dateFrom?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Date to must be a valid string' })
+  dateTo?: string;
+
+  @IsOptional()
+  @IsEnum(StandupStatus, { message: 'Status must be a valid standup status' })
+  status?: StandupStatus;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'Page must be a number' })
+  page?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'Limit must be a number' })
+  limit?: number;
+
+  @IsOptional()
+  @IsEnum(StandupSortField, { message: 'Sort must be a valid standup sort field' })
+  sort?: StandupSortField;
+
+  @IsOptional()
+  @IsEnum(StandupOrderField, { message: 'Order must be a valid standup order field' })
+  order?: StandupOrderField;
 }
