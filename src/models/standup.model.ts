@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
 export enum StandupStatus {
   DRAFT = 'draft',
@@ -6,7 +6,7 @@ export enum StandupStatus {
 }
 
 export interface IStandup extends Document {
-  userId: Types.ObjectId;
+  userId: Schema.Types.ObjectId | string;
   date: Date;
   yesterday: string;
   today: string;

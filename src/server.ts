@@ -1,8 +1,6 @@
-// src/server.ts
 import 'dotenv/config';
 import app from './app';
 
-// import logger from './common/utils/logger';
 import { connectDatabase } from './storage/database.config';
 import logger from './common/utils/logger';
 

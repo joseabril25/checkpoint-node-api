@@ -1,6 +1,6 @@
 import { BaseRepository } from './base.repository';
 import { Standup, IStandup } from '../../models';
-import { StandupQueryDto } from '@/types';
+import { CreateStandupDto, StandupQueryDto, UpdateStandupDto } from '@/types';
 import { FilterQuery } from 'mongoose';
 
 export class StandupRepository extends BaseRepository<IStandup> {
@@ -77,7 +77,7 @@ export class StandupRepository extends BaseRepository<IStandup> {
   }
 
   // Keep only the special methods
-  async createOrUpdateDraft(userId: string, date: Date, data: Partial<IStandup>): Promise<IStandup> {
+  async createOrUpdateDraft(userId: string, date: Date, data: Partial<CreateStandupDto | UpdateStandupDto>): Promise<IStandup> {
     const startOfDay = new Date(date);
     startOfDay.setUTCHours(0, 0, 0, 0);
 
