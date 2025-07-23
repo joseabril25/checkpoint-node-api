@@ -4,12 +4,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './common/middleware';
-import { authRoutes } from './api/auth/auth.routes';
+import { apiRouter } from './api/api.routes';
 // import mongoSanitize from 'express-mongo-sanitize';
 // import compression from 'compression';
-// import { errorHandler } from './common/middleware/error.middleware';
-
-// import routes from './api';
 
 const app = express();
 
@@ -41,11 +38,14 @@ app.use(express.urlencoded({ extended: true }));
 // app.use(mongoSanitize());
 
 // Routes
-app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1', apiRouter);
 
 // Health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Error handling
