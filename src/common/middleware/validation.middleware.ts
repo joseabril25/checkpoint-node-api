@@ -4,7 +4,7 @@ import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import createError from 'http-errors';
 
-export const validateDto = <T extends object>(
+export const ValidateDTO = <T extends object>(
   dtoClass: new () => T, 
   source: 'body' | 'query' | 'params' = 'body') => {
   return async (req: Request, _res: Response, next: NextFunction) => {

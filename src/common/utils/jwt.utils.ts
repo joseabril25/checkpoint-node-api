@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { JwtPayload } from '../../types';
 import createError from 'http-errors';
 
@@ -37,55 +37,26 @@ export class JwtUtils {
     }
   }
 
-  /**
-   * Generate access token
-   */
   static generateAccessToken(userId: string, email: string): string {
-    const secret = process.env['JWT_SECRET'];
+    const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error('JWT_SECRET is not defined');
     
     return jwt.sign(
       { userId, email },
       secret,
-      { expiresIn: process.env['JWT_EXPIRE'] || '7d' }
+      { expiresIn: process.env.JWT_EXPIRE } as SignOptions
     );
   }
 
-  /**
-   * Generate refresh token
-   */
   static generateRefreshToken(): string {
-    const secret = process.env['JWT_REFRESH_SECRET'];
+    const secret = process.env.JWT_REFRESH_SECRET;
     if (!secret) throw new Error('JWT_REFRESH_SECRET is not defined');
     
     return jwt.sign(
-      { type: 'refresh' },
+      {},
       secret,
-      { expiresIn: process.env['JWT_REFRESH_EXPIRE'] || '30d' }
+      { expiresIn: process.env.JWT_REFRESH_EXPIRE } as SignOptions
     );
   }
 
-  /**
-   * Extract user from request (from cookies or Authorization header)
-   */
-  static extractUserFromRequest(req: any): JwtPayload | null {
-    try {
-      // Check cookies first
-      let token = req.cookies?.accessToken;
-      
-      // If not in cookies, check Authorization header
-      if (!token) {
-        const authHeader = req.headers.authorization;
-        if (authHeader?.startsWith('Bearer ')) {
-          token = authHeader.substring(7);
-        }
-      }
-
-      if (!token) return null;
-
-      return JwtUtils.verifyToken(token);
-    } catch {
-      return null;
-    }
-  }
 }

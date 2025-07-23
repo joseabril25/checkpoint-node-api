@@ -1,7 +1,7 @@
+import { JwtUtils } from "../../common/utils";
 import { UserRepository, RefreshTokenRepository } from "../../storage/repositories";
 import { CreateUserDto, LoginDto, AuthResponseDto, UserResponseDto } from "../../types";
 import createError from 'http-errors';
-import jwt, { SignOptions } from 'jsonwebtoken';
 
 export class AuthService {
   private userRepository: UserRepository;
@@ -23,9 +23,9 @@ export class AuthService {
     const user = await this.userRepository.create(userData);
     
     // Generate tokens
-    const accessToken = this.generateAccessToken(user.id, user.email);
-    const refreshToken = this.generateRefreshToken();
-    
+    const accessToken = JwtUtils.generateAccessToken(user.id, user.email);
+    const refreshToken = JwtUtils.generateRefreshToken();
+
     // Save refresh token
     await this.refreshTokenRepository.create({
       userId: user.id,
@@ -66,9 +66,9 @@ export class AuthService {
     }
 
     // Generate tokens
-    const accessToken = this.generateAccessToken(user.id, user.email);
-    const refreshToken = this.generateRefreshToken();
-    
+    const accessToken = JwtUtils.generateAccessToken(user.id, user.email);
+    const refreshToken = JwtUtils.generateRefreshToken();
+
     // Save refresh token
     await this.refreshTokenRepository.create({
       userId: user.id,
@@ -119,8 +119,8 @@ export class AuthService {
     }
 
     // Generate new tokens
-    const accessToken = this.generateAccessToken(user.id, user.email);
-    const refreshToken = this.generateRefreshToken();
+    const accessToken = JwtUtils.generateAccessToken(user.id, user.email);
+    const refreshToken = JwtUtils.generateRefreshToken();
 
     // Delete old refresh token and save new one
     await this.refreshTokenRepository.invalidateToken(oldRefreshToken);
@@ -138,27 +138,5 @@ export class AuthService {
 
   async logoutAll(userId: string): Promise<void> {
     await this.refreshTokenRepository.invalidateAllUserTokens(userId);
-  }
-
-  private generateAccessToken(userId: string, email: string): string {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT_SECRET is not defined');
-    
-    return jwt.sign(
-      { userId, email },
-      secret,
-      { expiresIn: process.env.JWT_EXPIRE } as SignOptions
-    );
-  }
-
-  private generateRefreshToken(): string {
-    const secret = process.env.JWT_REFRESH_SECRET;
-    if (!secret) throw new Error('JWT_REFRESH_SECRET is not defined');
-    
-    return jwt.sign(
-      {},
-      secret,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRE } as SignOptions
-    );
   }
 }
