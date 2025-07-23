@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { errorHandler } from './common/middleware';
 import { authRoutes } from './api/auth/auth.routes';
 // import mongoSanitize from 'express-mongo-sanitize';
@@ -15,6 +16,7 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors());
+app.use(cookieParser());
 // app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

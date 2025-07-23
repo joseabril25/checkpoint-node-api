@@ -23,7 +23,7 @@ export class AuthService {
     const user = await this.userRepository.create(userData);
     
     // Generate tokens
-    const accessToken = this.generateAccessToken(user.id.toString(), user.email);
+    const accessToken = this.generateAccessToken(user.id, user.email);
     const refreshToken = this.generateRefreshToken();
     
     // Save refresh token
