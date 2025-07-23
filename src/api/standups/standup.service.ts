@@ -1,7 +1,7 @@
 import createError from 'http-errors';
-import { StandupRepository } from "../../storage/repositories";
-import { CreateStandupDto, StandupResponseDto } from "../../types";
-import { IStandup } from '../../models';
+import { StandupRepository } from "@/storage/repositories";
+import { CreateStandupDto, StandupResponseDto, UpdateStandupDto } from "@/types";
+import { IStandup } from '@/models';
 
 
 export class StandupService {
@@ -17,9 +17,8 @@ export class StandupService {
       throw createError(409, 'Standup already exists for this date');
     }
 
-    const createdStandup = await this.standupRepository.createOrUpdateDraft(
+    const createdStandup = await this.standupRepository.createStandup(
       userId, 
-      standupData.date as Date || new Date(), 
       standupData
     );
 
@@ -37,5 +36,44 @@ export class StandupService {
     };
 
     return standupResponse;
+  }
+
+  async updateStandup(
+    standupId: string,
+    userId: string,
+    updateData: UpdateStandupDto
+  ): Promise<StandupResponseDto> {
+    // Find the standup and verify ownership
+    const existingStandup = await this.standupRepository.findOne({
+      _id: standupId,
+      userId
+    }) as IStandup | null;
+
+    if (!existingStandup) {
+      throw createError(404, 'Standup not found');
+    }
+
+    // Update the standup
+    const updatedStandup = await this.standupRepository.updateStandup(
+      standupId,
+      updateData
+    );
+
+    if (!updatedStandup) {
+      throw createError(500, 'Failed to update standup');
+    }
+
+    // Return formatted response
+    return {
+      id: updatedStandup.id,
+      userId: updatedStandup.userId.toString(),
+      date: updatedStandup.date,
+      yesterday: updatedStandup.yesterday,
+      today: updatedStandup.today,
+      blockers: updatedStandup.blockers,
+      status: updatedStandup.status,
+      createdAt: updatedStandup.createdAt,
+      updatedAt: updatedStandup.updatedAt
+    };
   }
 }

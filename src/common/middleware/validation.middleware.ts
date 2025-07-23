@@ -21,7 +21,14 @@ export const ValidateDTO = <T extends object>(
         throw createError(400, 'Validation failed', { details: errorMessages });
       }
       
-      req.body = dto; // Replace with validated DTO
+      // Replace with validated DTO based on source
+      if (source === 'body') {
+        req.body = dto;
+      } else if (source === 'params') {
+        req.params = dto as any;
+      } else if (source === 'query') {
+        req.query = dto as any;
+      }
       next();
     } catch (error) {
       next(error);

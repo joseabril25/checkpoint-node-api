@@ -76,16 +76,23 @@ export class StandupRepository extends BaseRepository<IStandup> {
     return { data, total };
   }
 
-  // Keep only the special methods
-  async createOrUpdateDraft(userId: string, date: Date, data: Partial<CreateStandupDto | UpdateStandupDto>): Promise<IStandup> {
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
+  async createStandup(userId: string, data: CreateStandupDto): Promise<IStandup> {
+    const standupData = {
+      ...data,
+      userId,
+      date: data.date || new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    return this.model.findOneAndUpdate(
-      { userId, date: startOfDay },
-      { ...data, userId, date: startOfDay },
-      { new: true, upsert: true, runValidators: true }
-    ).exec() as Promise<IStandup>;
+    return this.create(standupData as IStandup); // Uses base repository
+  }
+
+  async updateStandup(standupId: string, data: UpdateStandupDto): Promise<IStandup | null> {
+    return this.update(standupId, {
+      ...data,
+      updatedAt: new Date()
+    }); // Uses base repository
   }
 }
 
