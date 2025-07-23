@@ -5,6 +5,8 @@ let mongoServer: MongoMemoryServer;
 
 // Increase timeout for downloading MongoDB binaries on first run
 jest.setTimeout(60000);
+
+// Mock chalk
 jest.mock('chalk', () => ({
     blue: (str: string) => str,
     green: (str: string) => str,
@@ -12,6 +14,13 @@ jest.mock('chalk', () => ({
     yellow: (str: string) => str,
     gray: (str: string) => str,
   }));
+
+// Suppress console.log and console.error in tests (they're often expected errors)
+global.console = {
+  ...console,
+  log: jest.fn(),
+  error: jest.fn(),
+};
 
 beforeAll(async () => {
   try {
