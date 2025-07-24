@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { loginUser, logoutUser, refreshAccessToken, registerUser } from './auth.controller';
+import { loginUser, logoutUser, refreshAccessToken, registerUser, getCurrentUser } from './auth.controller';
 import { ValidateDTO } from '../../common/middleware/validation.middleware';
 import { RegisterRequestDto } from './DTOs/register.dto';
 import { LoginRequestDto } from './DTOs/login.dto';
@@ -28,6 +28,12 @@ router.post('/logout',
 router.post('/refresh-token',
   AuthGuard,
   refreshAccessToken
-)
+);
+
+// GET /api/v1/auth/me
+router.get('/me',
+  AuthGuard,
+  getCurrentUser
+);
 
 export { router as authRoutes };

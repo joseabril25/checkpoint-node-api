@@ -88,4 +88,14 @@ export const refreshAccessToken = asyncHandler(
       
     ApiResponse.noContent(res);
   }
-);  
+);
+
+export const getCurrentUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user!.userId; // AuthGuard ensures req.user exists
+
+    const user = await authService.getCurrentUser(userId);
+    
+    ApiResponse.success(res, user, "User profile retrieved successfully");
+  }
+);

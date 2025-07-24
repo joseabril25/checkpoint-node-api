@@ -139,4 +139,22 @@ export class AuthService {
   async logoutAll(userId: string): Promise<void> {
     await this.refreshTokenRepository.invalidateAllUserTokens(userId);
   }
+
+  async getCurrentUser(userId: string): Promise<UserResponseDto> {
+    const user = await this.userRepository.findByIdWithoutPassword(userId);
+    if (!user) {
+      throw createError(404, 'User not found');
+    }
+
+    return {
+      id: user.id.toString(),
+      email: user.email,
+      name: user.name,
+      timezone: user.timezone,
+      profileImage: user.profileImage,
+      status: user.status,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+  }
 }
