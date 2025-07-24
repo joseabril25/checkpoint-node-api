@@ -4,15 +4,15 @@ import { StandupStatus } from "../../../models";
 
 export class CreateStandupRequestDto implements CreateStandupDto {
   @IsString({ message: 'Yesterday\'s update is required' })
-  @Length(1, 1000, { message: 'Yesterday\'s update must be between 1 and 1000 characters' })
+  @Length(1, 2000, { message: 'Yesterday\'s update must be between 1 and 2000 characters (supports markdown)' })
   yesterday: string;
 
   @IsString({ message: 'Today\'s plan is required' })
-  @Length(1, 1000, { message: 'Today\'s plan must be between 1 and 1000 characters' })
+  @Length(1, 2000, { message: 'Today\'s plan must be between 1 and 2000 characters (supports markdown)' })
   today: string;
 
   @IsString({ message: 'Blockers information is required' })
-  @Length(1, 1000, { message: 'Blockers information must be between 1 and 1000 characters' })
+  @Length(1, 2000, { message: 'Blockers information must be between 1 and 2000 characters (supports markdown)' })
   @IsOptional()
   blockers: string;
 
@@ -24,17 +24,17 @@ export class CreateStandupRequestDto implements CreateStandupDto {
 export class UpdateStandupRequestDto implements UpdateStandupDto {
   @IsOptional()
   @IsString({ message: 'Yesterday\'s update must be a string' })
-  @Length(1, 1000, { message: 'Yesterday\'s update must be between 1 and 1000 characters' })
+  @Length(1, 2000, { message: 'Yesterday\'s update must be between 1 and 2000 characters (supports markdown)' })
   yesterday?: string;
 
   @IsOptional()
   @IsString({ message: 'Today\'s plan must be a string' })
-  @Length(1, 1000, { message: 'Today\'s plan must be between 1 and 1000 characters' })
+  @Length(1, 2000, { message: 'Today\'s plan must be between 1 and 2000 characters (supports markdown)' })
   today?: string;
 
   @IsOptional()
   @IsString({ message: 'Blockers information must be a string' })
-  @Length(1, 1000, { message: 'Blockers information must be between 1 and 1000 characters' })
+  @Length(1, 2000, { message: 'Blockers information must be between 1 and 2000 characters (supports markdown)' })
   blockers?: string;
 
   @IsOptional()

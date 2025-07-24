@@ -5,6 +5,37 @@ export enum StandupStatus {
   SUBMITTED = 'submitted',
 }
 
+// Basic markdown validation function
+function validateMarkdown(content: string): boolean {
+  if (!content || typeof content !== 'string') {
+    return false;
+  }
+
+  // Basic markdown syntax validation
+  // Check for unmatched brackets, parentheses, and basic syntax
+  const brackets = content.match(/\[/g)?.length || 0;
+  const closeBrackets = content.match(/\]/g)?.length || 0;
+  const parens = content.match(/\(/g)?.length || 0;
+  const closeParens = content.match(/\)/g)?.length || 0;
+  
+  // Check for basic markdown syntax violations
+  if (brackets !== closeBrackets || parens !== closeParens) {
+    return false;
+  }
+
+  // Check for invalid link syntax
+  if (content.includes('](') && !content.match(/\[.*?\]\(.*?\)/)) {
+    return false;
+  }
+
+  // Check for invalid image syntax
+  if (content.includes('![') && !content.match(/!\[.*?\]\(.*?\)/)) {
+    return false;
+  }
+
+  return true;
+}
+
 export interface IStandup extends Document {
   userId: Schema.Types.ObjectId | string;
   date: Date;
@@ -45,17 +76,29 @@ const standupSchema = new Schema<IStandup>(
     yesterday: {
       type: String,
       required: [true, 'Yesterday field is required'],
-      maxlength: [1000, 'Yesterday field cannot exceed 1000 characters'],
+      maxlength: [2000, 'Yesterday field cannot exceed 2000 characters'],
+      validate: {
+        validator: validateMarkdown,
+        message: 'Yesterday field contains invalid markdown syntax',
+      },
     },
     today: {
       type: String,
       required: [true, 'Today field is required'],
-      maxlength: [1000, 'Today field cannot exceed 1000 characters'],
+      maxlength: [2000, 'Today field cannot exceed 2000 characters'],
+      validate: {
+        validator: validateMarkdown,
+        message: 'Today field contains invalid markdown syntax',
+      },
     },
     blockers: {
       type: String,
-      maxlength: [1000, 'Blockers field cannot exceed 1000 characters'],
+      maxlength: [2000, 'Blockers field cannot exceed 2000 characters'],
       default: 'None',
+      validate: {
+        validator: validateMarkdown,
+        message: 'Blockers field contains invalid markdown syntax',
+      },
     },
     status: {
       type: String,
