@@ -13,8 +13,10 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    const allowedOrigins = [
+    // Get allowed origins from environment variable or use default
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
       'http://localhost:3000',
+      'http://localhost:3001',
     ];
 
     // Allow requests with no origin (like mobile apps or curl requests)
