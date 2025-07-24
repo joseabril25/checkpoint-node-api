@@ -7,8 +7,13 @@ export enum StandupStatus {
 
 // Basic markdown validation function
 function validateMarkdown(content: string): boolean {
-  if (!content || typeof content !== 'string') {
+  if (typeof content !== 'string') {
     return false;
+  }
+  
+  // Allow empty strings
+  if (!content) {
+    return true;
   }
 
   // Basic markdown syntax validation
@@ -38,7 +43,6 @@ function validateMarkdown(content: string): boolean {
 
 export interface IStandup extends Document {
   userId: Schema.Types.ObjectId | string;
-  date: Date;
   yesterday: string;
   today: string;
   blockers?: string;
@@ -53,25 +57,6 @@ const standupSchema = new Schema<IStandup>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'User ID is required'],
-    },
-    date: {
-      type: Date,
-      required: [true, 'Date is required'],
-      validate: {
-        validator: function (date: Date) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const sevenDaysAgo = new Date(today);
-          sevenDaysAgo.setDate(today.getDate() - 7);
-
-          const tomorrow = new Date(today);
-          tomorrow.setDate(today.getDate() + 1);
-
-          return date >= sevenDaysAgo && date < tomorrow;
-        },
-        message: 'Date must be within the last 7 days and not in the future',
-      },
     },
     yesterday: {
       type: String,
@@ -117,19 +102,9 @@ const standupSchema = new Schema<IStandup>(
   }
 );
 
-// Compound unique index - one standup per user per day
-standupSchema.index({ userId: 1, date: 1 }, { unique: true });
-standupSchema.index({ date: 1, createdAt: 1 });
+// Indexes for efficient querying
+standupSchema.index({ userId: 1, createdAt: 1 });
+standupSchema.index({ createdAt: 1 });
 standupSchema.index({ status: 1 });
-
-// Middleware to normalize date to start of day
-standupSchema.pre('save', function (next) {
-  if (this.date) {
-    const date = new Date(this.date);
-    date.setUTCHours(0, 0, 0, 0);
-    this.date = date;
-  }
-  next();
-});
 
 export const Standup = model<IStandup>('Standup', standupSchema);

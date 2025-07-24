@@ -17,7 +17,7 @@ export class StandupRepository extends BaseRepository<IStandup> {
       status,
       page = 1,
       limit = 10,
-      sort = 'date',
+      sort = 'createdAt',
       order = 'desc'
     } = query;
 
@@ -40,18 +40,18 @@ export class StandupRepository extends BaseRepository<IStandup> {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      filter.date = { $gte: startOfDay, $lte: endOfDay };
+      filter.createdAt = { $gte: startOfDay, $lte: endOfDay };
     } else if (dateFrom || dateTo) {
-      filter.date = {};
+      filter.createdAt = {};
       if (dateFrom) {
         const start = new Date(dateFrom);
         start.setUTCHours(0, 0, 0, 0);
-        filter.date.$gte = start;
+        filter.createdAt.$gte = start;
       }
       if (dateTo) {
         const end = new Date(dateTo);
         end.setUTCHours(23, 59, 59, 999);
-        filter.date.$lte = end;
+        filter.createdAt.$lte = end;
       }
     }
 
@@ -75,7 +75,6 @@ export class StandupRepository extends BaseRepository<IStandup> {
     const data: StandupResponseDto[] = rawData.map((standup: any) => ({
       id: standup._id.toString(),
       userId: standup.userId?._id?.toString() || standup.userId?.toString() || '',
-      date: standup.date,
       yesterday: standup.yesterday,
       today: standup.today,
       blockers: standup.blockers,
@@ -106,20 +105,14 @@ export class StandupRepository extends BaseRepository<IStandup> {
   async createStandup(userId: string, data: CreateStandupDto): Promise<IStandup> {
     const standupData = {
       ...data,
-      userId,
-      date: data.date || new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
+      userId
     };
 
     return this.create(standupData as IStandup); // Uses base repository
   }
 
   async updateStandup(standupId: string, data: UpdateStandupDto): Promise<IStandup | null> {
-    return this.update(standupId, {
-      ...data,
-      updatedAt: new Date()
-    }); // Uses base repository
+    return this.update(standupId, data); // Uses base repository - timestamps handled automatically
   }
 }
 

@@ -7,7 +7,6 @@ export interface CreateStandupDto {
   today: string;
   blockers?: string;
   status?: StandupStatus;
-  date?: Date | string; // Allow string for API input
 }
 
 export interface UpdateStandupDto {
@@ -18,7 +17,6 @@ export interface UpdateStandupDto {
 }
 
 export enum StandupSortField {
-  DATE = 'date',
   CREATED_AT = 'createdAt',
   UPDATED_AT = 'updatedAt'
 }
@@ -41,7 +39,6 @@ export interface StandupQueryDto {
 
 export interface StandupResponseDto extends BaseEntityDto {
   userId: string;
-  date: Date;
   yesterday: string;
   today: string;
   blockers?: string;

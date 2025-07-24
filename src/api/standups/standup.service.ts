@@ -13,7 +13,7 @@ export class StandupService {
 
   async createStandup(userId: string, standupData: CreateStandupDto): Promise<StandupResponseDto> {
     // Check if standup already exists for this date (like auth checks for existing user)
-    const existingStandup = await this.standupRepository.findOne({ userId, date: standupData.date }) as IStandup | null;
+    const existingStandup = await this.standupRepository.findOne({ userId, createdAt: new Date() }) as IStandup | null;
     if (existingStandup) {
       throw createError(409, 'Standup already exists for this date');
     }
@@ -27,7 +27,6 @@ export class StandupService {
     const standupResponse: StandupResponseDto = {
       id: createdStandup.id,
       userId: createdStandup.userId.toString(),
-      date: createdStandup.date,
       yesterday: createdStandup.yesterday,
       today: createdStandup.today,
       blockers: createdStandup.blockers,
@@ -68,7 +67,6 @@ export class StandupService {
     return {
       id: updatedStandup.id,
       userId: updatedStandup.userId.toString(),
-      date: updatedStandup.date,
       yesterday: updatedStandup.yesterday,
       today: updatedStandup.today,
       blockers: updatedStandup.blockers,
@@ -87,7 +85,7 @@ export class StandupService {
       status,
       page = 1,
       limit = 20,
-      sort = StandupSortField.DATE,
+      sort = StandupSortField.CREATED_AT,
       order = StandupOrderField.DESC
     } = queryParams;
 

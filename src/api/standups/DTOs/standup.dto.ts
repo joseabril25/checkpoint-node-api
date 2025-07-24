@@ -11,10 +11,10 @@ export class CreateStandupRequestDto implements CreateStandupDto {
   @Length(1, 2000, { message: 'Today\'s plan must be between 1 and 2000 characters (supports markdown)' })
   today: string;
 
-  @IsString({ message: 'Blockers information is required' })
-  @Length(1, 2000, { message: 'Blockers information must be between 1 and 2000 characters (supports markdown)' })
   @IsOptional()
-  blockers: string;
+  @IsString({ message: 'Blockers information must be a string' })
+  @Length(0, 2000, { message: 'Blockers information must be between 0 and 2000 characters (supports markdown)' })
+  blockers?: string;
 
   @IsEnum(StandupStatus, { message: 'Status must be a valid string' })
   @IsOptional()

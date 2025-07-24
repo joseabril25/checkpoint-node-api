@@ -65,13 +65,11 @@ describe('StandupService Integration Tests', () => {
 
       const todayStandup: CreateStandupDto = {
         ...testStandupData,
-        date: today,
         yesterday: 'Today standup'
       };
 
       const yesterdayStandup: CreateStandupDto = {
         ...testStandupData,
-        date: yesterday,
         yesterday: 'Yesterday standup'
       };
 
@@ -93,7 +91,6 @@ describe('StandupService Integration Tests', () => {
       // Arrange
       const standupWithoutDate: CreateStandupDto = {
         ...testStandupData,
-        date: undefined as any
       };
 
       // Act
@@ -101,11 +98,12 @@ describe('StandupService Integration Tests', () => {
 
       // Assert
       const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
       const resultDate = new Date(result.date);
       
-      expect(resultDate.getDate()).toBe(today.getDate());
-      expect(resultDate.getMonth()).toBe(today.getMonth());
-      expect(resultDate.getFullYear()).toBe(today.getFullYear());
+      expect(resultDate.getUTCDate()).toBe(today.getUTCDate());
+      expect(resultDate.getUTCMonth()).toBe(today.getUTCMonth());
+      expect(resultDate.getUTCFullYear()).toBe(today.getUTCFullYear());
     });
 
     it('should validate standup fields', async () => {

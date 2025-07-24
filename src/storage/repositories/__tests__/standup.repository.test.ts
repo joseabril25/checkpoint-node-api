@@ -29,12 +29,8 @@ describe('StandupRepository Integration Tests', () => {
   });
 
   describe('createStandup', () => {
-    it('should create a standup with correct date', async () => {
-      const date = new Date();
-      date.setDate(date.getDate() - 1); // Yesterday
-      
+    it('should create a standup successfully', async () => {
       const standupData = {
-        date,
         yesterday: 'Completed task A',
         today: 'Working on task B',
         blockers: 'None',
@@ -46,15 +42,15 @@ describe('StandupRepository Integration Tests', () => {
       expect(result).toBeDefined();
       expect(result.userId.toString()).toBe(testUser1.id);
       expect(result.yesterday).toBe('Completed task A');
-      
-      // Check date is normalized to start of day (UTC)
-      const savedDate = new Date(result.date);
-      expect(savedDate.getUTCHours()).toBe(0);
-      expect(savedDate.getUTCMinutes()).toBe(0);
-      expect(savedDate.getUTCSeconds()).toBe(0);
+      expect(result.today).toBe('Working on task B');
+      expect(result.blockers).toBe('None');
+      expect(result.status).toBe(StandupStatus.DRAFT);
+      expect(result.createdAt).toBeDefined();
     });
 
-    it('should handle default date when not provided', async () => {
+    it('should create standup with automatic timestamp', async () => {
+      const beforeCreate = new Date();
+      
       const standupData = {
         yesterday: 'Default date test',
         today: 'Testing default date',
@@ -63,50 +59,35 @@ describe('StandupRepository Integration Tests', () => {
       };
 
       const result = await standupRepository.createStandup(testUser1.id, standupData);
+      const afterCreate = new Date();
 
       expect(result).toBeDefined();
-      
-      // Should default to today
-      const today = new Date();
-      const savedDate = new Date(result.date);
-      expect(savedDate.getDate()).toBe(today.getDate());
-      expect(savedDate.getMonth()).toBe(today.getMonth());
-      expect(savedDate.getFullYear()).toBe(today.getFullYear());
+      expect(result.createdAt).toBeDefined();
+      expect(result.createdAt.getTime()).toBeGreaterThanOrEqual(beforeCreate.getTime());
+      expect(result.createdAt.getTime()).toBeLessThanOrEqual(afterCreate.getTime());
     });
   });
 
   describe('findStandups', () => {
     beforeEach(async () => {
-      // Create test data
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-      
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setUTCHours(0, 0, 0, 0);
-
-      // Create today's standups
+      // Create test standups
       await standupRepository.createStandup(testUser1.id, {
-        date: today,
-        yesterday: 'User1 today work',
-        today: 'User1 today plan',
+        yesterday: 'User1 standup 1',
+        today: 'User1 plan 1',
         blockers: 'None',
         status: StandupStatus.SUBMITTED
       });
 
       await standupRepository.createStandup(testUser2.id, {
-        date: today,
-        yesterday: 'User2 today work',
-        today: 'User2 today plan',
+        yesterday: 'User2 standup 1',
+        today: 'User2 plan 1',
         blockers: 'None',
         status: StandupStatus.DRAFT
       });
 
-      // Create yesterday's standup for user1
       await standupRepository.createStandup(testUser1.id, {
-        date: yesterday,
-        yesterday: 'User1 yesterday work',
-        today: 'User1 yesterday plan',
+        yesterday: 'User1 standup 2',
+        today: 'User1 plan 2',
         blockers: 'Some blocker',
         status: StandupStatus.SUBMITTED
       });
@@ -130,20 +111,18 @@ describe('StandupRepository Integration Tests', () => {
       expect(result.data.every(s => s.userId === testUser1.id)).toBe(true);
     });
 
-    it('should filter by specific date', async () => {
-      // Get the actual yesterday's date from the test data setup
-      const actualYesterday = new Date();
-      actualYesterday.setDate(actualYesterday.getDate() - 1);
-      actualYesterday.setUTCHours(0, 0, 0, 0);
-      const dateString = actualYesterday.toISOString().split('T')[0];
+    it('should filter by date range using createdAt', async () => {
+      const now = new Date();
+      const dateString = now.toISOString().split('T')[0];
 
       const query: StandupQueryDto = {
         date: dateString
       };
       const result = await standupRepository.findStandups(query);
 
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].yesterday).toBe('User1 yesterday work');
+      // Should find all standups created today
+      expect(result.data.length).toBeGreaterThan(0);
+      expect(result.data.every(s => s.createdAt)).toBe(true);
     });
 
     it('should filter by status', async () => {
@@ -184,11 +163,11 @@ describe('StandupRepository Integration Tests', () => {
       expect(result.pagination.hasMore).toBe(true);
     });
 
-    it('should sort by date descending by default', async () => {
+    it('should sort by createdAt descending by default', async () => {
       const query: StandupQueryDto = {};
       const result = await standupRepository.findStandups(query);
 
-      const dates = result.data.map(s => new Date(s.date).getTime());
+      const dates = result.data.map(s => new Date(s.createdAt).getTime());
       expect(dates[0]).toBeGreaterThanOrEqual(dates[1]);
       expect(dates[1]).toBeGreaterThanOrEqual(dates[2]);
     });
