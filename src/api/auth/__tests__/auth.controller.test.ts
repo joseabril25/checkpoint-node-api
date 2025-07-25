@@ -6,7 +6,8 @@ import { JwtUtils } from '../../../common/utils';
 // Mock JWT utilities
 jest.mock('../../../common/utils/jwt.utils');
 
-describe('Auth Controller Integration Tests', () => {   
+describe('Auth Controller Integration Tests', () => {
+  jest.setTimeout(120000); // 2 minutes timeout for auth tests due to bcrypt   
   const testUserData = {
     email: 'test@example.com',
     password: 'password123',

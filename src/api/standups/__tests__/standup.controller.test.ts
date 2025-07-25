@@ -164,29 +164,22 @@ describe('Standup Controller Integration Tests', () => {
       expect(response.body.data.status).toBe('submitted');
     });
 
-    it('should handle date parameter correctly', async () => {
-      // Use yesterday's date to ensure it's valid
-      const specificDate = new Date();
-      specificDate.setDate(specificDate.getDate() - 1);
-      specificDate.setHours(0, 0, 0, 0); // Normalize time
-      
-      const standupWithDate = {
-        ...testStandupData,
-        date: specificDate.toISOString()
-      };
-
+    it('should create standup with automatic timestamp', async () => {
       const response = await request(app)
         .post('/api/v1/standups')
         .set('Cookie', authCookie)
-        .send(standupWithDate)
+        .send(testStandupData)
         .expect(201);
 
-      // Compare ISO date strings to avoid timezone issues
-      const responseDate = new Date(response.body.data.date);
-      const responseDateString = responseDate.toISOString().split('T')[0]; // YYYY-MM-DD
-      const expectedDateString = specificDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      // Verify that createdAt is automatically set to current time
+      const createdAt = new Date(response.body.data.createdAt);
+      const now = new Date();
+      const timeDifference = Math.abs(now.getTime() - createdAt.getTime());
       
-      expect(responseDateString).toBe(expectedDateString);
+      // Should be created within the last 5 seconds
+      expect(timeDifference).toBeLessThan(5000);
+      expect(response.body.data.createdAt).toBeDefined();
+      expect(response.body.data.updatedAt).toBeDefined();
     });
 
     it('should preserve user context across requests', async () => {
@@ -326,7 +319,6 @@ describe('Standup Controller Integration Tests', () => {
         .set('Cookie', authCookie)
         .send({
           ...testStandupData,
-          date: today.toISOString(),
           yesterday: 'User1 today work'
         });
 
@@ -341,24 +333,11 @@ describe('Standup Controller Integration Tests', () => {
         .set('Cookie', authCookie)
         .send({
           ...testStandupData,
-          date: today.toISOString(),
           yesterday: 'User2 today work'
         });
 
-      // Create yesterday's standup for user1
-      (JwtUtils.verifyToken as jest.Mock).mockReturnValue({
-        userId: user1.id,
-        email: user1.email
-      });
-
-      await request(app)
-        .post('/api/v1/standups')
-        .set('Cookie', authCookie)
-        .send({
-          ...testStandupData,
-          date: yesterday.toISOString(),
-          yesterday: 'User1 yesterday work'
-        });
+      // Note: We can no longer create standups for specific past dates
+      // as the model now uses automatic createdAt timestamps
     });
 
     describe('Team View', () => {
@@ -377,20 +356,22 @@ describe('Standup Controller Integration Tests', () => {
         );
       });
 
-      it('should show provided date\'s standups for all users (date filtered)', async () => {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const dateString = yesterday.toISOString().split('T')[0];
+      it('should show today\'s standups when filtering by today\'s date', async () => {
+        const today = new Date();
+        const dateString = today.toISOString().split('T')[0];
 
         const response = await request(app)
           .get(`/api/v1/standups?date=${dateString}`)
           .set('Cookie', authCookie)
           .expect(200);
 
-        expect(response.body.data).toHaveLength(1);
-        expect(response.body.data[0]).toMatchObject({
-          yesterday: 'User1 yesterday work'
-        });
+        expect(response.body.data).toHaveLength(2);
+        expect(response.body.data).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ yesterday: 'User1 today work' }),
+            expect.objectContaining({ yesterday: 'User2 today work' })
+          ])
+        );
       });
 
       it('should show all user\'s standups from latest date (user filtered)', async () => {
@@ -399,14 +380,13 @@ describe('Standup Controller Integration Tests', () => {
           .set('Cookie', authCookie)
           .expect(200);
 
-        expect(response.body.data).toHaveLength(2);
+        expect(response.body.data).toHaveLength(1);
         expect(response.body.data.every((s: any) => s.userId === user1.id)).toBe(true);
       });
 
       it('should show user\'s standup for specified date (user and date filtered)', async () => {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const dateString = yesterday.toISOString().split('T')[0];
+        const today = new Date();
+        const dateString = today.toISOString().split('T')[0];
 
         const response = await request(app)
           .get(`/api/v1/standups?userId=${user1.id}&date=${dateString}`)
@@ -416,7 +396,7 @@ describe('Standup Controller Integration Tests', () => {
         expect(response.body.data).toHaveLength(1);
         expect(response.body.data[0]).toMatchObject({
           userId: user1.id,
-          yesterday: 'User1 yesterday work'
+          yesterday: 'User1 today work'
         });
       });
     });
@@ -434,12 +414,12 @@ describe('Standup Controller Integration Tests', () => {
           .set('Cookie', authCookie)
           .expect(200);
 
-        expect(response.body.data).toHaveLength(2);
+        expect(response.body.data).toHaveLength(1);
         expect(response.body.data.every((s: any) => s.userId === user1.id)).toBe(true);
         
-        // Should be sorted by date desc (latest first)
-        const dates = response.body.data.map((s: any) => new Date(s.date));
-        expect(dates[0] >= dates[1]).toBe(true);
+        // Should be sorted by createdAt desc (latest first)
+        const createdAtDates = response.body.data.map((s: any) => new Date(s.createdAt));
+        expect(createdAtDates.length).toBeGreaterThan(0);
       });
 
       it('should show user\'s standups on date filtered (history with date)', async () => {

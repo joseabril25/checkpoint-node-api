@@ -41,7 +41,6 @@ describe('StandupService Integration Tests', () => {
       expect(result).toEqual({
         id: expect.any(String),
         userId: testUser.id,
-        date: expect.any(Date),
         yesterday: testStandupData.yesterday,
         today: testStandupData.today,
         blockers: testStandupData.blockers,
@@ -57,53 +56,53 @@ describe('StandupService Integration Tests', () => {
       expect(createdStandup?.yesterday).toBe(testStandupData.yesterday);
     });
 
-    it('should handle different dates properly', async () => {
+    it('should create multiple standups with automatic timestamps', async () => {
       // Arrange
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-
-      const todayStandup: CreateStandupDto = {
+      const firstStandup: CreateStandupDto = {
         ...testStandupData,
-        yesterday: 'Today standup'
+        yesterday: 'First standup'
       };
 
-      const yesterdayStandup: CreateStandupDto = {
+      const secondStandup: CreateStandupDto = {
         ...testStandupData,
-        yesterday: 'Yesterday standup'
+        yesterday: 'Second standup'
       };
 
       // Act
-      const todayResult = await standupService.createStandup(userId, todayStandup);
-      const yesterdayResult = await standupService.createStandup(userId, yesterdayStandup);
+      const firstResult = await standupService.createStandup(userId, firstStandup);
+      // Wait a bit to ensure different timestamps
+      await new Promise(resolve => setTimeout(resolve, 10));
+      const secondResult = await standupService.createStandup(userId, secondStandup);
 
       // Assert
-      expect(todayResult.id).not.toBe(yesterdayResult.id);
-      expect(todayResult.yesterday).toBe('Today standup');
-      expect(yesterdayResult.yesterday).toBe('Yesterday standup');
+      expect(firstResult.id).not.toBe(secondResult.id);
+      expect(firstResult.yesterday).toBe('First standup');
+      expect(secondResult.yesterday).toBe('Second standup');
+      expect(new Date(secondResult.createdAt).getTime()).toBeGreaterThan(new Date(firstResult.createdAt).getTime());
 
       // Verify both exist in database
       const standups = await Standup.find({ userId: testUser.id });
       expect(standups.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('should default to current date if no date provided', async () => {
+    it('should set createdAt to current time automatically', async () => {
       // Arrange
-      const standupWithoutDate: CreateStandupDto = {
+      const standupData: CreateStandupDto = {
         ...testStandupData,
       };
 
       // Act
-      const result = await standupService.createStandup(userId, standupWithoutDate);
+      const result = await standupService.createStandup(userId, standupData);
 
       // Assert
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-      const resultDate = new Date(result.date);
+      const now = new Date();
+      const resultCreatedAt = new Date(result.createdAt);
+      const timeDifference = Math.abs(now.getTime() - resultCreatedAt.getTime());
       
-      expect(resultDate.getUTCDate()).toBe(today.getUTCDate());
-      expect(resultDate.getUTCMonth()).toBe(today.getUTCMonth());
-      expect(resultDate.getUTCFullYear()).toBe(today.getUTCFullYear());
+      // Should be created within the last 5 seconds
+      expect(timeDifference).toBeLessThan(5000);
+      expect(result.createdAt).toBeDefined();
+      expect(result.updatedAt).toBeDefined();
     });
 
     it('should validate standup fields', async () => {
@@ -194,22 +193,16 @@ describe('StandupService Integration Tests', () => {
       // Create today's standups for both users
       await standupService.createStandup(user1Id, {
         ...testStandupData,
-        date: today,
         yesterday: 'User1 today work'
       });
 
       await standupService.createStandup(user2Id, {
         ...testStandupData,
-        date: today,
         yesterday: 'User2 today work'
       });
 
-      // Create yesterday's standup for user1 
-      await standupService.createStandup(user1Id, {
-        ...testStandupData,
-        date: yesterday,
-        yesterday: 'User1 yesterday work'
-      });
+      // Note: We can no longer create standups for specific past dates
+      // as the model now uses automatic createdAt timestamps
     });
 
     describe('Team View', () => {
@@ -225,30 +218,31 @@ describe('StandupService Integration Tests', () => {
         );
       });
 
-      it('should show provided date\'s standups for all users (date filtered)', async () => {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const dateString = yesterday.toISOString().split('T')[0];
+      it('should show today\'s standups when filtering by today\'s date', async () => {
+        const today = new Date();
+        const dateString = today.toISOString().split('T')[0];
 
         const result = await standupService.getStandups({ date: dateString });
 
-        expect(result.data).toHaveLength(1);
-        expect(result.data[0]).toMatchObject({
-          yesterday: 'User1 yesterday work'
-        });
+        expect(result.data).toHaveLength(2);
+        expect(result.data).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ yesterday: 'User1 today work' }),
+            expect.objectContaining({ yesterday: 'User2 today work' })
+          ])
+        );
       });
 
       it('should show all user\'s standups from latest date (user filtered)', async () => {
         const result = await standupService.getStandups({ userId: user1Id });
 
-        expect(result.data).toHaveLength(2);
+        expect(result.data).toHaveLength(1);
         expect(result.data.every((s: any) => s.userId === user1Id)).toBe(true);
       });
 
       it('should show user\'s standup for specified date (user and date filtered)', async () => {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const dateString = yesterday.toISOString().split('T')[0];
+        const today = new Date();
+        const dateString = today.toISOString().split('T')[0];
 
         const result = await standupService.getStandups({ 
           userId: user1Id, 
@@ -258,7 +252,7 @@ describe('StandupService Integration Tests', () => {
         expect(result.data).toHaveLength(1);
         expect(result.data[0]).toMatchObject({
           userId: user1Id,
-          yesterday: 'User1 yesterday work'
+          yesterday: 'User1 today work'
         });
       });
     });
@@ -267,7 +261,7 @@ describe('StandupService Integration Tests', () => {
       it('should show user\'s standups from latest (user history)', async () => {
         const result = await standupService.getStandups({ userId: user1Id });
 
-        expect(result.data).toHaveLength(2);
+        expect(result.data).toHaveLength(1);
         expect(result.data.every((s: any) => s.userId === user1Id)).toBe(true);
       });
 
