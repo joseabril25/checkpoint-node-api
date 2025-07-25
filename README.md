@@ -221,10 +221,11 @@ npm run test:coverage
 
 Required environment variables for production:
 ```env
-NODE_ENV=production
-MONGODB_URI=your-mongodb-atlas-uri
-JWT_SECRET=your-production-jwt-secret
+Same as development, but ensure MONGODB_URI points to your production database
 ```
+
+#### Railway api URL:
+
 
 ### Manual Deployment
 
