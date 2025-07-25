@@ -226,6 +226,9 @@ Same as development, but ensure MONGODB_URI points to your production database
 
 #### Railway api URL:
 
+```
+https://checkpoint-node-api-production.up.railway.app/
+```
 
 ### Manual Deployment
 

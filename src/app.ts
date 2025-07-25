@@ -2,10 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
+import mongoSanitize from 'express-mongo-sanitize';
 import { errorHandler } from './common/middleware';
 import { apiRouter } from './api/api.routes';
-// import mongoSanitize from 'express-mongo-sanitize';
-// import compression from 'compression';
 
 const app = express();
 
@@ -33,10 +33,10 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-// app.use(compression());
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// app.use(mongoSanitize());
+app.use(mongoSanitize());
 
 // Routes
 app.use('/api/v1', apiRouter);
