@@ -46,11 +46,11 @@ class Logger {
     fs.appendFileSync(combinedLogFile, formattedMessage + '\n');
   }
 
-  private log(level: LogLevel, levelName: string, color: typeof chalk, message: string, meta?: any): void {
+  private log(level: LogLevel, levelName: string, colorFn: (text: string) => string, message: string, meta?: any): void {
     if (level > this.logLevel) return;
 
     const timestamp = chalk.gray(new Date().toISOString());
-    const levelStr = color(levelName.padEnd(5));
+    const levelStr = colorFn(levelName.padEnd(5));
     const formattedMessage = `${timestamp} ${levelStr} ${message}`;
     
     console.log(formattedMessage);
