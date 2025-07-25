@@ -10,18 +10,22 @@ export const registerUser = asyncHandler(
   async (req: Request<{}, {}, RegisterRequestDto>, res: Response) => {
     const result = await authService.register(req.body);
     
+    // Cookie settings based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' as const : 'lax' as const,
+    };
+
     // Set cookies BEFORE sending response
     res.cookie('accessToken', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
     
     res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      ...cookieOptions,
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
     
@@ -34,18 +38,22 @@ export const loginUser = asyncHandler(
   async (req: Request<{}, {}, LoginRequestDto>, res: Response) => {
     const result = await authService.login(req.body);
     
+    // Cookie settings based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' as const : 'lax' as const,
+    };
+
     // Set cookies BEFORE sending response
     res.cookie('accessToken', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
     
     res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      ...cookieOptions,
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
     
